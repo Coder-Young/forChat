@@ -1,11 +1,14 @@
 #include "const.h"
 #include "CServer.h"
+#include "CfgManager.h"
 
 int main()
 {
 	try
 	{
-		unsigned short port = static_cast<unsigned short>(8080);
+		CfgManager gCfgMgr;
+		std::string gate_port_str = gCfgMgr["GateServer"]["Port"];
+		unsigned short port = static_cast<unsigned short>(atoi(gate_port_str.c_str()));
 		boost::asio::io_context ioc{ 1 };
 		boost::asio::signal_set signals(ioc, SIGINT, SIGTERM);
 		signals.async_wait([&](const boost::system::error_code& error, int signal_number) {

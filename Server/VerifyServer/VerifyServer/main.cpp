@@ -11,7 +11,7 @@ int main()
 {
 	EmailService::GetInstance()->init(SMTP_SERVER, SMTP_PORT, 
 		SMTP_USER, SMTP_AUTH_CODE, FROM_NAME);
-	VerifyServer s("tcp://localhost:8081");
+	VerifyServer s("tcp://127.0.0.1:8081");
 	s.Run();
 	return 0;
 }

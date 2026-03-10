@@ -6,9 +6,10 @@ class HttpConnection : public std::enable_shared_from_this<HttpConnection>
 {
 public:
 	friend class LogicSystem;
-	HttpConnection(boost::asio::ip::tcp::socket socket);
+	HttpConnection(boost::asio::io_context& ioc);
 
 	void Start();
+	boost::asio::ip::tcp::socket& getSocket() { return _socket; }
 
 private:
 	void CheckDeadLine();
@@ -16,6 +17,7 @@ private:
 	void HandleReq();
 
 private:
+	boost::asio::io_context& _ioc;
 	boost::asio::ip::tcp::socket _socket;
 	boost::beast::flat_buffer _buffer;
 	http::request<http::dynamic_body> _request;

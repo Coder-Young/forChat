@@ -107,21 +107,19 @@ void VerifyServer::HandleRequest(EmailRequest&& req)
 		return;
 	}
 
-	std::string email = req.request["email"].toStyledString();
+	std::string email = req.request["email"].asString();
 	std::string code = GenerateVerifyCode();
 	std::cout << "[VerifyServer] Generated code: " << code << " for " << email << std::endl;
 
 	std::string title = "VerifyCode";
 	std::string body =
-		"尊敬的用户，您好：\n\n"
-		"您正在请求进行身份验证。\n"
-		"您的验证码是：" + code + "\n"
-		"该验证码仅在 5 分钟内有效，请勿泄露给他人。\n\n"
-		"如果您没有请求此操作，请忽略本邮件。\n\n"
-		"此致\n"
-		"系统管理员团队\n"
-		"(本邮件由系统自动发送，请勿直接回复)";
-	//std::string body = fmt::format("您好，\n\n您的验证码是：{}\n\n该验证码 5 分钟内有效。\n\nVerifyServer 团队", code);
+		"Hello,\n\n"
+		"You are requesting a verification code.\n"
+		"Your code is: " + code + "\n"
+		"This code is valid for 5 minutes.\n\n"
+		"Best regards,\n"
+		"ForChat Team";
+	//std::string body = fmt::format("锟斤拷锟矫ｏ拷\n\n锟斤拷锟斤拷锟斤拷证锟斤拷锟角ｏ拷{}\n\n锟斤拷锟斤拷证锟斤拷 5 锟斤拷锟斤拷锟斤拷锟斤拷效锟斤拷\n\nVerifyServer 锟脚讹拷", code);
 	EmailResult res = EmailService::GetInstance()->SendEmail(email, title, body);
 	
 	Json::Value response;

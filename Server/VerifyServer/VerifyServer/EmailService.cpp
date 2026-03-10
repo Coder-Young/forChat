@@ -4,7 +4,7 @@
 #include <sstream>
 #include <cstring>
 
-// 内部结构：传递数据给回调
+// 锟节诧拷锟结构锟斤拷锟斤拷锟斤拷锟斤拷锟捷革拷锟截碉拷
 struct MailPayload {
     const char* read_ptr;
     size_t read_size;
@@ -56,7 +56,6 @@ EmailResult EmailService::SendEmail(const std::string& to, const std::string& su
         return { false, "EmailService not initialized" };
     }
 
-    // 构造邮件内容
     std::stringstream mail_data;
     mail_data << "To: " << to << "\r\n"
         << "From: " << m_fromName << " <" << m_fromAddress << ">\r\n"
@@ -81,15 +80,24 @@ EmailResult EmailService::SendEmail(const std::string& to, const std::string& su
     std::string url = (m_smtpPort == 465 ? "smtps://" : "smtp://") +
         m_smtpServer + ":" + std::to_string(m_smtpPort);
 
-    curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
+    if (m_smtpPort == 465) {
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    } else {
+        // 587: 鏄惧紡 STARTTLS
+        curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    }
+
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_USERNAME, m_username.c_str());
     curl_easy_setopt(curl, CURLOPT_PASSWORD, m_authCode.c_str());
     curl_easy_setopt(curl, CURLOPT_MAIL_FROM, m_fromAddress.c_str());
 
-    std::string temp = "2803664719@qq.com";
-    recipients = curl_slist_append(recipients, temp.c_str());
+    //std::string temp = "2803664719@qq.com";
+    recipients = curl_slist_append(recipients, to.c_str());
     curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
 
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, PayloadCallback);
@@ -97,17 +105,12 @@ EmailResult EmailService::SendEmail(const std::string& to, const std::string& su
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-    if (m_smtpPort == 465) {
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    }
-
     res = curl_easy_perform(curl);
 
     EmailResult result;
     if (res != CURLE_OK) {
         result.success = false;
-        result.message = std::string("SMTP Error: {}" + std::string(curl_easy_strerror(res)));
+        result.message = std::string("SMTP Error: " + std::string(curl_easy_strerror(res)));
         std::cerr << "[EmailService] Send failed to " << to << ": " << result.message << std::endl;
     }
     else {

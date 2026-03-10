@@ -1,5 +1,6 @@
 #include "LogicSystem.h"
 #include "HttpConnection.h"
+#include "VerifyZmqClient.h"
 
 LogicSystem::LogicSystem()
 {
@@ -40,8 +41,12 @@ LogicSystem::LogicSystem()
 			beast::ostream(connection->_response.body()) << jsonstr;
 			return true;
 		}
-		
+
 		auto email = src_root["email"].asString();
+		std::string ret_code = VerifyZmqClient::GetInstance()->RequestVerifyCode(email);
+		if (ret_code.empty())
+			return false;
+		
 		std::cout << "email is " << email << std::endl;
 		root["error"] = 0;
 		root["email"] = src_root["email"];
