@@ -1,15 +1,15 @@
 #include "VerifyZmqClient.h"
 #include "CfgManager.h"
 
-VerifyZmqClient::VerifyZmqClient() : 
-    context_(1), dealer_(context_, ZMQ_DEALER)
+VerifyZmqClient::VerifyZmqClient()
 {
-	//dealer_.setsockopt(ZMQ_IDENTITY, "LogicSystem", 11);
-    zmq_setsockopt(dealer_, ZMQ_IDENTITY, "LogicSystem", 11);
+    zmqConnPool = std::make_unique<ZmqConnectPool>(3);
+}
 
-    CfgManager gCfgMgr;
-    endpoint_ = gCfgMgr["VerifyServer"]["Address"] + ":" + gCfgMgr["VerifyServer"]["Port"];
-	dealer_.connect(endpoint_);
+VerifyZmqClient::~VerifyZmqClient()
+{
+    if (zmqConnPool)
+        zmqConnPool->Close();
 }
 
 bool VerifyZmqClient::SendAndRecvMessage(const Json::Value& request, Json::Value& response)
@@ -19,18 +19,21 @@ bool VerifyZmqClient::SendAndRecvMessage(const Json::Value& request, Json::Value
     memcpy(request_msg.data(), jsonstr.c_str(), jsonstr.size());
 
     try {
-        auto send_res = dealer_.send(request_msg, zmq::send_flags::none);
+        auto dealer_ = zmqConnPool->getConnection();
+        auto send_res = dealer_->send(request_msg, zmq::send_flags::none);
         if (!send_res.has_value()) {
             std::cerr << "[VerifyZmqClient] Failed to send request." << std::endl;
             return false;
         }
 
         zmq::message_t reply_msg;
-        auto recv_res = dealer_.recv(reply_msg, zmq::recv_flags::none);
+        auto recv_res = dealer_->recv(reply_msg, zmq::recv_flags::none);
         if (!recv_res.has_value()) {
             std::cerr << "[VerifyZmqClient] Failed to receive response." << std::endl;
             return false;
         }
+
+        zmqConnPool->returnConnection(dealer_);
 
         std::string reply_str(static_cast<char*>(reply_msg.data()), reply_msg.size());
         Json::Reader reader;

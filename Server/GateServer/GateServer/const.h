@@ -3,8 +3,12 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <queue>
 #include <functional>
 #include <unordered_map>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include <boost/beast/http.hpp>
 #include <boost/beast.hpp>
 #include <boost/asio.hpp>
