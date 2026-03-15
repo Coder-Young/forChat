@@ -1,5 +1,6 @@
 #include "VerifyServer.h"
 #include "EmailService.h"
+#include "RedisMgr.h"
 #include <iostream>
 #include <curl/curl.h>
 
@@ -100,7 +101,6 @@ void VerifyServer::threadWorker()
 
 void VerifyServer::HandleRequest(EmailRequest&& req)
 {
-	//SendResponse
 	if (!req.request.isMember("email") || !req.request["email"].isString())
 	{
 		SendError(req.identity, "need email");
@@ -119,7 +119,6 @@ void VerifyServer::HandleRequest(EmailRequest&& req)
 		"This code is valid for 5 minutes.\n\n"
 		"Best regards,\n"
 		"ForChat Team";
-	//std::string body = fmt::format("���ã�\n\n������֤���ǣ�{}\n\n����֤�� 5 ��������Ч��\n\nVerifyServer �Ŷ�", code);
 	EmailResult res = EmailService::GetInstance()->SendEmail(email, title, body);
 	
 	Json::Value response;
@@ -127,6 +126,7 @@ void VerifyServer::HandleRequest(EmailRequest&& req)
 		response["status"] = "ok";
 		response["msg"] = code;
 		SendResponse(req.identity, response);
+		StoreVerifyCodeRaw(email, code);
 	}
 	else
 	{
@@ -156,4 +156,12 @@ void VerifyServer::SendResponse(zmq::message_t& identity, const Json::Value& res
 	catch (const std::exception& e) {
 		std::cerr << "[VerifyServer] Send error: " << e.what() << std::endl;
 	}
+}
+
+bool VerifyServer::StoreVerifyCodeRaw(const std::string& email, const std::string& code)
+{
+	std::string key = "verify_code:" + email;
+	RedisMgr::GetInstance()->Connect("127.0.0.1", 6379, "223312");
+
+	return RedisMgr::GetInstance()->Set(key, code, EXPIRE_TIME);
 }

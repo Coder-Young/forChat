@@ -18,6 +18,7 @@
 #include <jsoncpp/json/json.h>
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
+#include <hiredis/hiredis.h>
 
 #include "Singleton.h"
 
@@ -29,4 +30,6 @@ enum ErrorCodes
 	Success		= 0,
 	Error_Json	= 1001,
 	RFCFailed	= 1002,
+	MISS_MATCH	= 1003,
+	EXPIRED 	= 1004
 };

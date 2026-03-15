@@ -25,10 +25,14 @@ if(NOT ZMQ_FOUND)
     set(ZMQ_FOUND_BY_PKGCONFIG TRUE)
 endif()
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(HIREDIS REQUIRED IMPORTED_TARGET hiredis)
+
 set(SOURCES
     main.cpp
     EmailService.cpp
     VerifyServer.cpp
+    RedisMgr.cpp
 )
 
 set(HEADERS
@@ -36,6 +40,7 @@ set(HEADERS
     const.h
     VerifyServer.h
     EmailService.h
+    RedisMgr.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -43,6 +48,8 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 target_include_directories(${PROJECT_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_include_directories(${PROJECT_NAME} PRIVATE hiredis)
 
 if(JSONCPP_INCLUDE_DIRS)
     target_include_directories(${PROJECT_NAME} PRIVATE ${JSONCPP_INCLUDE_DIRS})
@@ -68,6 +75,8 @@ else()
     # 如果以上都失败，尝试直接链接名字 (可能需要在系统中安装 libjsoncpp-dev)
     target_link_libraries(${PROJECT_NAME} PRIVATE jsoncpp)
 endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::HIREDIS)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${CURL_LIBRARIES})
 target_link_directories(${PROJECT_NAME} PRIVATE ${CURL_LIBRARY_DIRS})

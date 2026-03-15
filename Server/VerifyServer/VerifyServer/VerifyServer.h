@@ -36,6 +36,8 @@ private:
 	void SendError(zmq::message_t& identity, const std::string& msg);
 	void SendResponse(zmq::message_t& identity, const Json::Value& response);
 
+	bool StoreVerifyCodeRaw(const std::string& email, const std::string& code);
+
 	std::string GenerateVerifyCode() {
 		std::random_device rd;
 		std::mt19937 gen(rd());

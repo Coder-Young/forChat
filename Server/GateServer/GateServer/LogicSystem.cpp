@@ -1,6 +1,7 @@
 #include "LogicSystem.h"
 #include "HttpConnection.h"
 #include "VerifyZmqClient.h"
+#include "RedisMgr.h"
 
 LogicSystem::LogicSystem()
 {
@@ -26,7 +27,7 @@ LogicSystem::LogicSystem()
 		bool parse_success = reader.parse(body_str, src_root);
 		if (!parse_success)
 		{
-			std::cout << "failed to parse Json" << std::endl;
+			std::cout << "failed to parse getEmail Json" << std::endl;
 			root["error"] = ErrorCodes::Error_Json;
 			std::string jsonstr = root.toStyledString();
 			beast::ostream(connection->_response.body()) << jsonstr;
@@ -48,8 +49,67 @@ LogicSystem::LogicSystem()
 			return false;
 		
 		std::cout << "email is " << email << std::endl;
-		root["error"] = 0;
+		root["error"] = ErrorCodes::Success;
 		root["email"] = src_root["email"];
+		std::string jsonstr = root.toStyledString();
+		beast::ostream(connection->_response.body()) << jsonstr;
+		return true;
+		});
+
+	RegisterPostFunc("/user_register", [](std::shared_ptr<HttpConnection> connection){
+		auto body_str = boost::beast::buffers_to_string(connection->_request.body().data());
+		std::cout << "receive body is " << body_str << std::endl;
+
+		connection->_response.set(http::field::content_type, "text/json");
+		Json::Value root;
+		Json::Reader reader;
+		Json::Value src_root;
+
+		bool parse_success = reader.parse(body_str, src_root);
+		if (!parse_success)
+		{
+			std::cout << "failed to parse register Json" << std::endl;
+			root["error"] = ErrorCodes::Error_Json;
+			std::string jsonstr = root.toStyledString();
+			beast::ostream(connection->_response.body()) << jsonstr;
+			return true;
+		}
+
+		if (!src_root.isMember("varifycode") || !src_root.isMember("email"))
+		{
+			std::cout << "failed to parse register Json" << std::endl;
+			root["error"] = ErrorCodes::Error_Json;
+			std::string jsonstr = root.toStyledString();
+			beast::ostream(connection->_response.body()) << jsonstr;
+			return true;
+		}
+
+		auto email = src_root["email"].asString();
+		auto code = src_root["varifycode"].asString();
+		std::string stored_code;
+		std::string key = std::string("verify_code") + ":" + email;
+		RedisMgr::GetInstance()->Get(key, stored_code);
+
+		if (stored_code.empty())
+		{
+        	std::cout << "No verification code found" << std::endl;
+        	root["error"] = ErrorCodes::EXPIRED;
+			std::string jsonstr = root.toStyledString();
+        	beast::ostream(connection->_response.body()) << jsonstr;
+        	return true;
+		}
+
+		if (stored_code != code)
+		{
+			std::cout << "Verification code mismatch!" << std::endl;
+        	root["error"] = ErrorCodes::MISS_MATCH;
+			std::string jsonstr = root.toStyledString();
+        	beast::ostream(connection->_response.body()) << jsonstr;
+        	return true;
+		}
+
+		RedisMgr::GetInstance()->Del(key);
+		root["error"] = ErrorCodes::Success;
 		std::string jsonstr = root.toStyledString();
 		beast::ostream(connection->_response.body()) << jsonstr;
 		return true;

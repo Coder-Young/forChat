@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 project(GateServer)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #endif()
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 find_package(Boost REQUIRED COMPONENTS system filesystem) 
 find_package(jsoncpp CONFIG QUIET)
 if(NOT jsoncpp_FOUND)
@@ -23,6 +24,9 @@ if(NOT ZMQ_FOUND)
     set(ZMQ_FOUND_BY_PKGCONFIG TRUE)
 endif()
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(HIREDIS REQUIRED IMPORTED_TARGET hiredis)
+
 set(SOURCES
     LogicSystem.cpp
     HttpConnection.cpp
@@ -31,6 +35,8 @@ set(SOURCES
     AsioIOServicePool.cpp
     CfgManager.cpp
     VerifyZmqClient.cpp
+    RedisMgr.cpp
+    RedisConPool.cpp
 )
 
 set(HEADERS
@@ -42,6 +48,8 @@ set(HEADERS
     AsioIOServicePool.h
     CfgManager.h
     VerifyZmqClient.h
+    RedisMgr.h
+    RedisConPool.h
 )
 
 # 创建可执行文件
@@ -52,6 +60,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${Boost_INCLUDE_DIRS}
 )
+
+target_include_directories(${PROJECT_NAME} PRIVATE hiredis)
 
 # 如果 jsoncpp 是通过 pkg_config 找到的，需要手动添加包含目录
 if(JSONCPP_INCLUDE_DIRS)
@@ -72,6 +82,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Boost::system
     Boost::filesystem
 )
+
+target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::HIREDIS)
 
 # 处理 jsoncpp 的链接方式
 if(TARGET jsoncpp_lib)
