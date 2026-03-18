@@ -61,6 +61,20 @@ bool RedisMgr::Set(const std::string& key, const std::string& code, const int se
     return true;
 }
 
+bool RedisMgr::ExistsKey(const std::string &key)
+{
+    auto _reply = (redisReply*)redisCommand(this->_connect, "exists %s", key.c_str());
+    if (_reply == nullptr || _reply->type != REDIS_REPLY_INTEGER || _reply->integer == 0) {
+        freeReplyObject(_reply);
+        return false;
+    }
+
+    std::cout << " Found [ Key " << key << " ] exists ! " << std::endl;
+    freeReplyObject(_reply);
+    return true;
+}
+
+
 void RedisMgr::Close()
 {
     redisFree(_connect);

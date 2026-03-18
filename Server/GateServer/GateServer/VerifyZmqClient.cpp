@@ -1,5 +1,6 @@
 #include "VerifyZmqClient.h"
 #include "CfgManager.h"
+#include <vector>
 
 VerifyZmqClient::VerifyZmqClient()
 {
@@ -26,16 +27,20 @@ bool VerifyZmqClient::SendAndRecvMessage(const Json::Value& request, Json::Value
             return false;
         }
 
-        zmq::message_t reply_msg;
-        auto recv_res = dealer_->recv(reply_msg, zmq::recv_flags::none);
-        if (!recv_res.has_value()) {
+        std::vector<std::string> parts;
+        while (true){
+            zmq::message_t part;
+            auto recv_res = dealer_->recv(part);
+            parts.emplace_back(static_cast<char*>(part.data()), part.size());
+        }
+
+        if (parts.at(1).empty())
+        {
             std::cerr << "[VerifyZmqClient] Failed to receive response." << std::endl;
             return false;
         }
 
-        zmqConnPool->returnConnection(dealer_);
-
-        std::string reply_str(static_cast<char*>(reply_msg.data()), reply_msg.size());
+        std::string reply_str = parts.at(2);
         Json::Reader reader;
         bool parse_success = reader.parse(reply_str, response);
         if (!parse_success) {
@@ -43,6 +48,7 @@ bool VerifyZmqClient::SendAndRecvMessage(const Json::Value& request, Json::Value
             return false;
         }
 
+        zmqConnPool->returnConnection(dealer_);
         return true;
     }
     catch (const std::exception& e) {

@@ -4,10 +4,10 @@ project(GateServer)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-#if(NOT CMAKE_BUILD_TYPE)
-#    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
-#endif()
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 find_package(Boost REQUIRED COMPONENTS system filesystem) 
@@ -27,6 +27,24 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(HIREDIS REQUIRED IMPORTED_TARGET hiredis)
 
+
+find_path(MYSQLCPPCONN_INCLUDE_DIR cppconn/driver.h
+    PATHS /usr/include /usr/local/include
+)
+
+find_library(MYSQLCPPCONN_LIBRARY
+    NAMES mysqlcppconn
+    PATHS /usr/lib /usr/lib/x86_64-linux-gnu /usr/local/lib
+)
+
+if(NOT MYSQLCPPCONN_INCLUDE_DIR)
+    message(FATAL_ERROR "mysqlcppconn headers not found")
+endif()
+
+if(NOT MYSQLCPPCONN_LIBRARY)
+    message(FATAL_ERROR "mysqlcppconn library not found")
+endif()
+
 set(SOURCES
     LogicSystem.cpp
     HttpConnection.cpp
@@ -37,6 +55,9 @@ set(SOURCES
     VerifyZmqClient.cpp
     RedisMgr.cpp
     RedisConPool.cpp
+    MySqlPool.cpp
+    MySqlDao.cpp
+    MySqlMgr.cpp
 )
 
 set(HEADERS
@@ -50,7 +71,13 @@ set(HEADERS
     VerifyZmqClient.h
     RedisMgr.h
     RedisConPool.h
+    MySqlPool.h
+    MySqlDao.h
+    MySqlMgr.h
 )
+
+set(MYSQLCPPCONN_LIBRARIES ${MYSQLCPPCONN_LIBRARY})
+set(MYSQLCPPCONN_INCLUDE_DIRS ${MYSQLCPPCONN_INCLUDE_DIR})
 
 # 创建可执行文件
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -62,6 +89,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE hiredis)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${MYSQLCPPCONN_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${MYSQLCPPCONN_LIBRARIES})
 
 # 如果 jsoncpp 是通过 pkg_config 找到的，需要手动添加包含目录
 if(JSONCPP_INCLUDE_DIRS)

@@ -2,6 +2,7 @@
 #include "HttpConnection.h"
 #include "VerifyZmqClient.h"
 #include "RedisMgr.h"
+#include "MySqlMgr.h"
 
 LogicSystem::LogicSystem()
 {
@@ -84,12 +85,25 @@ LogicSystem::LogicSystem()
 			return true;
 		}
 
+		auto user = src_root["user"].asString();
 		auto email = src_root["email"].asString();
+		auto pwd = src_root["passwd"].asString();
+		auto cpwd = src_root["confirm"].asString();
 		auto code = src_root["varifycode"].asString();
+
+		if (pwd != cpwd)
+		{
+			std::cout << "pwd error" << std::endl;
+        	root["error"] = ErrorCodes::PWDERROR;
+			std::string jsonstr = root.toStyledString();
+        	beast::ostream(connection->_response.body()) << jsonstr;
+        	return true;
+		}
+
 		std::string stored_code;
 		std::string key = std::string("verify_code") + ":" + email;
 		RedisMgr::GetInstance()->Get(key, stored_code);
-
+		//RedisMgr::GetInstance()->Del(key);
 		if (stored_code.empty())
 		{
         	std::cout << "No verification code found" << std::endl;
@@ -108,8 +122,23 @@ LogicSystem::LogicSystem()
         	return true;
 		}
 
-		RedisMgr::GetInstance()->Del(key);
+		int ret = MySqlMgr::GetInstance()->RegUser(user, email, pwd);
+		if (ret == 0 || ret == -1)
+		{
+			std::cout << "register user error" << std::endl;
+        	root["error"] = ErrorCodes::REGERROR;
+        	std::string jsonstr = root.toStyledString();
+        	beast::ostream(connection->_response.body()) << jsonstr;
+        	return true;
+		}
+
 		root["error"] = ErrorCodes::Success;
+		root["uid"] = ret;
+    	root["email"] = email;
+    	root["user"] = user;
+    	root["passwd"] = pwd;
+    	root["confirm"] = cpwd;
+    	root["varifycode"] = stored_code;
 		std::string jsonstr = root.toStyledString();
 		beast::ostream(connection->_response.body()) << jsonstr;
 		return true;

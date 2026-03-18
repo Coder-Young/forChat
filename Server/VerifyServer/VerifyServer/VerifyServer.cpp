@@ -162,6 +162,10 @@ bool VerifyServer::StoreVerifyCodeRaw(const std::string& email, const std::strin
 {
 	std::string key = "verify_code:" + email;
 	RedisMgr::GetInstance()->Connect("127.0.0.1", 6379, "223312");
+	if (RedisMgr::GetInstance()->ExistsKey(key))
+	{
+
+	}
 
 	return RedisMgr::GetInstance()->Set(key, code, EXPIRE_TIME);
 }

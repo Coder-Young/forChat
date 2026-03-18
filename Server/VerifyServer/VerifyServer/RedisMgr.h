@@ -11,6 +11,7 @@ public:
 
     bool Connect(const std::string &host, int port, const std::string& pwd);
     bool Set(const std::string& key, const std::string& value, const int sec);
+    bool ExistsKey(const std::string &key);
     void Close();
 
 private:

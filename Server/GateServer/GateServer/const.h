@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <mutex>
+#include <thread>
 #include <condition_variable>
 #include <boost/beast/http.hpp>
 #include <boost/beast.hpp>
@@ -31,5 +32,7 @@ enum ErrorCodes
 	Error_Json	= 1001,
 	RFCFailed	= 1002,
 	MISS_MATCH	= 1003,
-	EXPIRED 	= 1004
+	EXPIRED 	= 1004,
+	PWDERROR 	= 1005,
+	REGERROR 	= 1006,
 };
