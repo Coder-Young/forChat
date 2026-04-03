@@ -10,6 +10,7 @@
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <zmq.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast.hpp>
 #include <boost/asio.hpp>
@@ -21,18 +22,27 @@
 #include <jsoncpp/json/reader.h>
 #include <hiredis/hiredis.h>
 
-#include "Singleton.h"
-
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = boost::beast::http;    // from <boost/beast/http.hpp>
 
 enum ErrorCodes
 {
-	Success		= 0,
-	Error_Json	= 1001,
-	RFCFailed	= 1002,
-	MISS_MATCH	= 1003,
-	EXPIRED 	= 1004,
-	PWDERROR 	= 1005,
-	REGERROR 	= 1006,
+	Success				= 0,
+	Error_Json			= 1001,
+	RFCFailed			= 1002,
+	MISS_MATCH			= 1003,
+	EXPIRED 			= 1004,
+	PWDERROR 			= 1005,
+	REGERROR 			= 1006,
+	EMAIL_MISS_MATCH 	= 1007,
+	UPDATE_PWD_FAIL 	= 1008,
+	PWD_INVALID			= 1009,
+	RPCFailed			= 1010,
+};
+
+struct UserInfo{
+	std::string name;
+	std::string email;
+	int uid;
+	std::string pwd;
 };

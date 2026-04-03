@@ -25,6 +25,8 @@ unsigned char FromHex(unsigned char x)
 
 void HttpConnection::Start()
 {
+	static int count = 0;
+	std::cout << "HttpConnection::Start() process " <<  count++ << std::endl;
 	auto self = shared_from_this();
 	http::async_read(_socket, _buffer, _request, [self](boost::beast::error_code ec, std::size_t bytes_transferred) {
 		try {

@@ -9,42 +9,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
-find_package(Boost REQUIRED COMPONENTS system filesystem) 
-find_package(jsoncpp CONFIG QUIET)
-if(NOT jsoncpp_FOUND)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(JSONCPP REQUIRED jsoncpp)
-endif()
-
-find_package(ZMQ CONFIG QUIET)
-if(NOT ZMQ_FOUND)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(ZMQ REQUIRED libzmq)
-    set(ZMQ_FOUND_BY_PKGCONFIG TRUE)
-endif()
-
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(HIREDIS REQUIRED IMPORTED_TARGET hiredis)
-
-
-find_path(MYSQLCPPCONN_INCLUDE_DIR cppconn/driver.h
-    PATHS /usr/include /usr/local/include
-)
-
-find_library(MYSQLCPPCONN_LIBRARY
-    NAMES mysqlcppconn
-    PATHS /usr/lib /usr/lib/x86_64-linux-gnu /usr/local/lib
-)
-
-if(NOT MYSQLCPPCONN_INCLUDE_DIR)
-    message(FATAL_ERROR "mysqlcppconn headers not found")
-endif()
-
-if(NOT MYSQLCPPCONN_LIBRARY)
-    message(FATAL_ERROR "mysqlcppconn library not found")
-endif()
-
 set(SOURCES
     LogicSystem.cpp
     HttpConnection.cpp
@@ -52,7 +16,9 @@ set(SOURCES
     GateServer.cpp
     AsioIOServicePool.cpp
     CfgManager.cpp
+    ZmqConnectionPool.cpp
     VerifyZmqClient.cpp
+    StatusZmqClient.cpp
     RedisMgr.cpp
     RedisConPool.cpp
     MySqlPool.cpp
@@ -68,7 +34,10 @@ set(HEADERS
     CServer.h
     AsioIOServicePool.h
     CfgManager.h
+    ZmqPoolManager.h
+    ZmqConnectionPool.h
     VerifyZmqClient.h
+    StatusZmqClient.h
     RedisMgr.h
     RedisConPool.h
     MySqlPool.h
@@ -76,60 +45,46 @@ set(HEADERS
     MySqlMgr.h
 )
 
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+
+find_package(Boost REQUIRED COMPONENTS system filesystem) 
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
+pkg_check_modules(HIREDIS REQUIRED IMPORTED_TARGET hiredis)
+
+find_package(ZMQ QUIET)
+if(NOT ZMQ_FOUND)
+    pkg_check_modules(ZMQ REQUIRED libzmq)
+endif()
+
+
+find_path(MYSQLCPPCONN_INCLUDE_DIR cppconn/driver.h
+    PATHS /usr/include /usr/local/include
+    REQUIRED
+)
+
+find_library(MYSQLCPPCONN_LIBRARY mysqlcppconn
+    PATHS /usr/lib /usr/lib/x86_64-linux-gnu /usr/local/lib
+    REQUIRED
+)
+
 set(MYSQLCPPCONN_LIBRARIES ${MYSQLCPPCONN_LIBRARY})
 set(MYSQLCPPCONN_INCLUDE_DIRS ${MYSQLCPPCONN_INCLUDE_DIR})
 
-# 创建可执行文件
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-
 # 包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
     ${Boost_INCLUDE_DIRS}
+    ${MYSQLCPPCONN_INCLUDE_DIRS}
+    ${ZMQ_INCLUDE_DIRS}
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE hiredis)
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${MYSQLCPPCONN_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${MYSQLCPPCONN_LIBRARIES})
-
-# 如果 jsoncpp 是通过 pkg_config 找到的，需要手动添加包含目录
-if(JSONCPP_INCLUDE_DIRS)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${JSONCPP_INCLUDE_DIRS})
-endif()
-
-# 链接库
-if (TARGET ZMQ::ZMQ)
-    target_link_libraries(${PROJECT_NAME} PRIVATE 
-        ZMQ::ZMQ
-    )
-else(ZMQ_FOUND_BY_PKGCONFIG OR ZMQ_LIBRARIES)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${ZMQ_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${ZMQ_LIBRARIES})
-endif()
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    Boost::system
-    Boost::filesystem
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+    ${MYSQLCPPCONN_LIBRARIES}
+    ${ZMQ_LIBRARIES}
+    ${Boost_LIBRARIES}
+    PkgConfig::HIREDIS
+    PkgConfig::JSONCPP
 )
-
-target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::HIREDIS)
-
-# 处理 jsoncpp 的链接方式
-if(TARGET jsoncpp_lib)
-    # CMake 现代目标导入方式
-    target_link_libraries(${PROJECT_NAME} PRIVATE jsoncpp_lib)
-elseif(JSONCPP_LIBRARIES)
-    # 传统变量方式
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${JSONCPP_LIBRARIES})
-else()
-    # 如果以上都失败，尝试直接链接名字 (可能需要在系统中安装 libjsoncpp-dev)
-    target_link_libraries(${PROJECT_NAME} PRIVATE jsoncpp)
-endif()
-
-# 编译选项 (可选，增加警告信息)
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
-
-# 线程支持 (Boost.Asio 有时需要 pthread)
-find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)

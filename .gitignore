@@ -3,4 +3,6 @@ Server/GateServer/GateServer/*.sh
 Server/GateServer/GateServer/build
 Server/VerifyServer/VerifyServer/*.sh
 Server/VerifyServer/VerifyServer/build
+Server/StatusServer/StatusServer/build
+Server/ChatServer/ChatServer/build
 

@@ -19,7 +19,7 @@ public:
 		std::cout << "Singleton destruct" << std::endl;
 	}
 
-	void PrintAddress()
+	static void PrintAddress()
 	{
 		std::cout << m_instance.get() << std::endl;
 	}
