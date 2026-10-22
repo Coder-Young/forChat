@@ -16,6 +16,10 @@ set(HEADERS
     Singleton.h
     StatusServer.h
     RedisConnectionGuard.h
+    ZmqConnectionPool.h
+    ZmqConnectionGuard.h
+    ZmqConnectionPoolManager.h
+    ChatZmqClient.h
 )
 
 set(SOURCES
@@ -24,6 +28,8 @@ set(SOURCES
     RedisConPool.cpp
     RedisMgr.cpp
     StatusServer.cpp
+    ZmqConnectionPool.cpp
+    ChatZmqClient.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -35,6 +41,9 @@ pkg_check_modules(PkgConfig REQUIRED)
 pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
 pkg_check_modules(HIREDIS REQUIRED IMPORTED_TARGET hiredis)
 pkg_check_modules(ZMQ REQUIRED libzmq)
+
+add_subdirectory(/home/yzq/forChat/Server/mySpdlog mySpdlog_build)
+target_link_libraries(${PROJECT_NAME} PRIVATE myspdlog)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${Boost_INCLUDE_DIRS}

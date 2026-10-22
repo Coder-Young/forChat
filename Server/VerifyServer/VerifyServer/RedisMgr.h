@@ -1,3 +1,4 @@
+#pragma once
 #include "const.h"
 #include "Singleton.h"
 
@@ -17,6 +18,5 @@ public:
 private:
     RedisMgr();
     
-    redisContext* _connect;
-    redisReply* _reply;
+    std::shared_ptr<RedisConPool> conn_pool_;
 };

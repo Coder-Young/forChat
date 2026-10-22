@@ -1,7 +1,8 @@
+#pragma once
 #include "const.h"
 #include "Singleton.h"
-#include "RedisConPool.h"
 
+class RedisConPool;
 class RedisMgr: public Singleton<RedisMgr>, 
     public std::enable_shared_from_this<RedisMgr>
 {
@@ -20,12 +21,17 @@ public:
     bool HSet(const std::string &key, const std::string  &hkey, const std::string &value);
     bool HSet(const char* key, const char* hkey, const char* hvalue, size_t hvaluelen);
     std::string HGet(const std::string &key, const std::string &hkey);
+    bool HDel(const std::string& key, const std::string& field);
     bool Del(const std::string &key);
     bool ExistsKey(const std::string &key);
     void Close();
 
+    // 分布式锁相关
+    std::string acquireLock(const std::string& lockName, int lockTimeout, int acquireTimeout);
+    bool RedisMgr::releaseLock(const std::string& lockName, const std::string& identifier);
+
 private:
     RedisMgr();
     
-    std::unique_ptr<RedisConPool> conn_pool_;
+    std::shared_ptr<RedisConPool> conn_pool_;
 };

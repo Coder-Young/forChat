@@ -21,6 +21,9 @@ set(SOURCES
     RedisMgr.cpp
     StatusZmqClient.cpp
     ZmqConnectionPool.cpp
+    UserMgr.cpp
+    ChatZmqHandler.cpp
+    ChatZmqClient.cpp
 )
 
 set(HEADERS
@@ -40,6 +43,10 @@ set(HEADERS
     ZmqConnectionPool.h
     ZmqPoolManager.h
     ZmqConnectionGuard.h
+    RedisConnectionGuard.h
+    UserMgr.h
+    ChatZmqHandler.h
+    ChatZmqClient.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
@@ -62,7 +69,7 @@ find_path(MYSQLCPPCONN_INCLUDE_DIRS cppconn/driver.h
 
 find_library(MYSQLCPPCONN_LIBRARIES mysqlcppconn
     PATHS /usr/lib /usr/lib/x86_64-linux-gnu /usr/local/lib REQUIRED)
-
+    
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${Boost_INCLUDE_DIRS}

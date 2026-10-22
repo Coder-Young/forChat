@@ -6,3 +6,5 @@ Server/VerifyServer/VerifyServer/build
 Server/StatusServer/StatusServer/build
 Server/ChatServer/ChatServer/build
 
+# AI
+Server/.claude

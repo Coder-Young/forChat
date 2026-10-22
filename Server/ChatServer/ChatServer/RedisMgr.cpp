@@ -1,5 +1,8 @@
 #include "RedisMgr.h"
+#include "RedisConPool.h"
 #include "ConfigManager.h"
+#include "RedisConnectionGuard.h"
+#include "DistLock.h"
 
 RedisMgr::RedisMgr()
 {
@@ -7,7 +10,7 @@ RedisMgr::RedisMgr()
     auto host = mgr["Redis"]["Host"];
     auto port = mgr["Redis"]["Port"];
     auto pwd = mgr["Redis"]["Passwd"];
-    conn_pool_.reset(new RedisConPool(5, host.c_str(), atoi(port.c_str()), pwd.c_str()));
+    conn_pool_.reset(new RedisConPool(10, host.c_str(), atoi(port.c_str()), pwd.c_str()));
 }
 
 RedisMgr::~RedisMgr()
@@ -17,7 +20,8 @@ RedisMgr::~RedisMgr()
 
 bool RedisMgr::Get(const std::string &key, std::string& value)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -25,9 +29,9 @@ bool RedisMgr::Get(const std::string &key, std::string& value)
 
     auto _reply = (redisReply*)redisCommand(connect, "GET %s", key.c_str());
     if (_reply == NULL) {
-         std::cout << "[ GET  " << key << " ] failed" << std::endl;
-         freeReplyObject(_reply);
-          return false;
+        std::cout << "[ GET  " << key << " ] failed" << std::endl;
+        //freeReplyObject(_reply);
+        return false;
     }
 
     if (_reply->type != REDIS_REPLY_STRING) {
@@ -44,7 +48,8 @@ bool RedisMgr::Get(const std::string &key, std::string& value)
 }
 
 bool RedisMgr::Set(const std::string &key, const std::string &value){
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -72,7 +77,8 @@ bool RedisMgr::Set(const std::string &key, const std::string &value){
 
 bool RedisMgr::Auth(const std::string &password)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -93,7 +99,8 @@ bool RedisMgr::Auth(const std::string &password)
 
 bool RedisMgr::LPush(const std::string &key, const std::string &value)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -117,7 +124,8 @@ bool RedisMgr::LPush(const std::string &key, const std::string &value)
 }
 
 bool RedisMgr::LPop(const std::string &key, std::string& value){
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -137,7 +145,8 @@ bool RedisMgr::LPop(const std::string &key, std::string& value){
 }
 
 bool RedisMgr::RPush(const std::string& key, const std::string& value) {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -161,7 +170,8 @@ bool RedisMgr::RPush(const std::string& key, const std::string& value) {
 }
 
 bool RedisMgr::RPop(const std::string& key, std::string& value) {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -180,7 +190,8 @@ bool RedisMgr::RPop(const std::string& key, std::string& value) {
 }
 
 bool RedisMgr::HSet(const std::string &key, const std::string &hkey, const std::string &value) {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -210,7 +221,8 @@ bool RedisMgr::HSet(const char* key, const char* hkey, const char* hvalue, size_
     argv[3] = hvalue;
     argvlen[3] = hvaluelen;
 
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -238,7 +250,8 @@ std::string RedisMgr::HGet(const std::string &key, const std::string &hkey)
     argv[2] = hkey.c_str();
     argvlen[2] = hkey.length();
 
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return "";
@@ -255,9 +268,33 @@ std::string RedisMgr::HGet(const std::string &key, const std::string &hkey)
     return value;
 }
 
+bool RedisMgr::HDel(const std::string& key, const std::string& field)
+{
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
+	if (connect == nullptr) {
+		return false;
+	}
+
+	redisReply* reply = (redisReply*)redisCommand(connect, "HDEL %s %s", key.c_str(), field.c_str());
+	if (reply == nullptr) {
+		std::cerr << "HDEL command failed" << std::endl;
+		return false;
+	}
+
+	bool success = false;
+	if (reply->type == REDIS_REPLY_INTEGER) {
+		success = reply->integer > 0;
+	}
+
+	freeReplyObject(reply);
+	return success;
+}
+
 bool RedisMgr::Del(const std::string &key)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -276,7 +313,8 @@ bool RedisMgr::Del(const std::string &key)
 
 bool RedisMgr::ExistsKey(const std::string &key)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -291,6 +329,35 @@ bool RedisMgr::ExistsKey(const std::string &key)
     std::cout << " Found [ Key " << key << " ] exists ! " << std::endl;
     freeReplyObject(_reply);
     return true;
+}
+
+// 分布式锁相关
+std::string RedisMgr::acquireLock(const std::string& lockName, int lockTimeout, int acquireTimeout)
+{
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
+    if (connect == nullptr)
+    {
+        return "";
+    }
+
+    return DistLock::Inst().acquireLock(connect, lockName, lockTimeout, acquireTimeout);
+}
+
+bool RedisMgr::releaseLock(const std::string& lockName, const std::string& identifier)
+{
+    if (identifier.empty()) {
+        return true;
+    }
+
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
+    if (connect == nullptr)
+    {
+        return false;
+    }
+
+    return DistLock::Inst().releaseLock(connect, lockName, identifier);
 }
 
 void RedisMgr::Close()

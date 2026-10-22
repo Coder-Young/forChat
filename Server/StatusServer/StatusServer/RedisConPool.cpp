@@ -17,13 +17,12 @@ RedisConPool::RedisConPool(size_t poolSize, const char *host, int port, const ch
         auto reply = (redisReply *)redisCommand(context, "AUTH %s", pwd);
         if (reply->type == REDIS_REPLY_ERROR)
         {
-            std::cout << "认证失败" << std::endl;
+            myspdlog::info("[RedisConPool] 认证失败");
             freeReplyObject(reply);
             continue;
         }
 
         freeReplyObject(reply);
-        std::cout << "认证成功" << std::endl;
         connections_.push(context);
     }
 }

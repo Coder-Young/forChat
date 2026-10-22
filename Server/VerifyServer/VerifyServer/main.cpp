@@ -13,5 +13,6 @@ int main()
 		SMTP_USER, SMTP_AUTH_CODE, FROM_NAME);
 	VerifyServer s("tcp://127.0.0.1:8081");
 	s.Run();
+
 	return 0;
 }

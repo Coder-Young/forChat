@@ -4,7 +4,6 @@
 #include <sstream>
 #include <cstring>
 
-// �ڲ��ṹ���������ݸ��ص�
 struct MailPayload {
     const char* read_ptr;
     size_t read_size;
@@ -38,8 +37,7 @@ void EmailService::init(const std::string& smtpServer, int port,
     m_fromAddress = username;
 
     m_initialized = true;
-    std::cout << "[EmailService] Initialized with SMTP: " << smtpServer << ":" << port << std::endl;
-    std::cout << "[EmailService] authCode: " << authCode.length() << std::endl;
+    myspdlog::info("[EmailService] Initialized with SMTP: {}:{} authCode: {}", smtpServer, port, authCode.length());
 }
 
 void EmailService::Shutdown() {

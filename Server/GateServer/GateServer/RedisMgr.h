@@ -28,5 +28,5 @@ public:
 private:
     RedisMgr();
     
-    std::unique_ptr<RedisConPool> conn_pool_;
+    std::shared_ptr<RedisConPool> conn_pool_;
 };

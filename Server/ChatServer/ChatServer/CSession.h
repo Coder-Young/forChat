@@ -4,11 +4,13 @@
 
 typedef std::function<void(boost::system::error_code &, size_t)> handlerFunc;
 
+class CServer;
 class LogicSystem;
 class CSession : public std::enable_shared_from_this<CSession>
 {
 public:
-    CSession(boost::asio::io_context& ioc);
+    CSession(boost::asio::io_context& ioc, CServer* server);
+    ~CSession() { Close(); }
 
     boost::asio::ip::tcp::socket& getSocket() { return _socket; }
 
@@ -16,6 +18,16 @@ public:
     void Close();
     void Send(char* msg,  short max_length, short msgid);
 	void Send(std::string msg, short msgid);
+
+    std::string& GetSessionId();
+    void SetUserId(int uid);
+    int GetUserId();
+
+    void NotifyOffline(int uid);
+
+    bool IsHeartbeatExpired(std::time_t& now);
+    void UpdateHeartbeat();
+    void DealExceptionSession();
 
 private:
     void AsyncReadHead(int);
@@ -36,11 +48,16 @@ private:
     };
     char _data[max_length];
 
-    bool b_pending;
+    bool b_send_pending;
     std::queue<std::shared_ptr<SendNode>> _send_queue;
     std::shared_ptr<MsgNode> _msg_head;
     std::shared_ptr<RecvNode> _msg_node;
     std::shared_ptr<LogicNode> _logic_node;
+
+    std::atomic<time_t> _last_heartbeat;
+    std::string _session_id;
+    int _user_uid;
+    CServer* _server;
 };
 
 class LogicNode

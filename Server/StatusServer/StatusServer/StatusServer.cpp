@@ -1,6 +1,7 @@
 #include "StatusServer.h"
 #include "CfgManager.h"
 #include "const.h"
+#include <string>
 #include "RedisMgr.h"
 
 #include <boost/uuid/uuid.hpp>
@@ -17,18 +18,23 @@ StatusServer::StatusServer(std::string &bind_ep)
     : context_(1), socket_(context_, ZMQ_ROUTER), bind_endpoint_(bind_ep), b_stop(false)
 {
     CfgManager cfg;
-    ChatServer s;
-    s.port = cfg["ChatServer1"]["Port"];
-    s.host = cfg["ChatServer1"]["Host"];
-    s.con_count = 0;
-    s.name = cfg["ChatServer1"]["Name"];
-    _servers.insert(std::make_pair(s.name, s));
+    auto server_lists = cfg["ChatServers"]["ServerName"];
+    
+    std::vector<std::string> names;
+    std::stringstream ss(server_lists);
+    std::string words;
+    while (std::getline(ss, words, ',')){
+        names.push_back(words);
+    }
 
-    // s.port = cfg["ChatServer2"]["Port"];
-    // s.host = cfg["ChatServer2"]["Host"];
-    // s.con_count = 0;
-    // s.name = cfg["ChatServer2"]["Name"];
-    // _servers.insert(std::make_pair(s.name, s));
+    for (size_t i = 0; i < names.size(); i++){
+        ChatServer s;
+        s.port = cfg[names[i]]["Port"];
+        s.host = cfg[names[i]]["Host"];
+        s.name = cfg[names[i]]["Name"];
+        s.con_count = 0;
+        _servers.insert(std::make_pair(s.name, s));
+    }
 
     try
     {
@@ -36,11 +42,10 @@ StatusServer::StatusServer(std::string &bind_ep)
     }
     catch(const zmq::error_t& e)
     {
-        std::cerr << "ZMQ bind error: " << e.what() 
-              << " (errno: " << e.num() << ")" << std::endl;
+        myspdlog::error("ZMQ bind error: {}  (errno: {})", e.what(), e.num());
     }
-    
-    std::cout << "[StatusServer]Bind to " << bind_endpoint_ << std::endl;
+
+    myspdlog::info("[StatusServer]Bind to {}", bind_endpoint_);
 
     _handler.insert(std::make_pair("GetChatServer", 
         std::bind(&StatusServer::HandleGetChatServer, this, std::placeholders::_1)));
@@ -59,7 +64,6 @@ StatusServer::~StatusServer()
 
 void StatusServer::Start()
 {
-    static int test_count = 0;
     b_stop = false;
     worker_thread_ = std::thread([this](){
     while (!b_stop)
@@ -102,14 +106,20 @@ void StatusServer::Start()
             bool parse_success = reader.parse(req_str, value);
             if (!parse_success)
             {
-                std::cout << "StatusServer parse json failed" << std::endl;
+                myspdlog::error("[StatusServer] parse json {} failed", req_str);
                 continue;
             }
             
-            _handler[value["ID"].asString()](value);
+            auto it = _handler.find(value["ID"].asString());
+            if (it != handler.end()){
+                it->second(value);
+            }
+            else{
+                myspdlog::error("[StatusServer] bad_function_call");
+            }
         }
         catch(std::exception &e){
-            std::cerr << "[StatusServer] Error: " << e.what() << std::endl;
+            myspdlog::error("[StatusServer] Error: {}", e.what());
             Json::Value reply;
             reply["error"] = ErrorCodes::InternalError;
             socket_.send(zmq::buffer(reply.toStyledString()), zmq::send_flags::none);
@@ -131,9 +141,8 @@ void StatusServer::HandleGetChatServer(Json::Value& value)
 
         ChatServer s = getChatServer();
         std::string token = generate_unique_string();
-        std::cout << "create token: " << token << std::endl;
+        myspdlog::info("[StatusServer]create token: {}", token);
         insertIntoRedis(uid, token);
-        insertToken(uid, token);
 
         Json::Value reply;
         reply["Host"] = s.host;
@@ -143,7 +152,7 @@ void StatusServer::HandleGetChatServer(Json::Value& value)
         SendReply(reply);
     }
     catch(std::exception &e){
-        std::cerr << "[StatusServer] Error: " << e.what() << std::endl;
+        myspdlog::error("[StatusServer] Error: {}", e.what());
         Json::Value reply;
         reply["error"] = ErrorCodes::InternalError;
         SendReply(reply);
@@ -154,10 +163,36 @@ ChatServer StatusServer::getChatServer()
 {
     std::lock_guard<std::mutex> lock(_mutex);
     auto minServer = _servers.begin()->second;
-    for (const auto &server : _servers)
+    
+    auto lock_key = LOCK_COUNT;
+    auto identifier = RedisMgr::GetInstance()->acquireLock(lock_key, LOCK_TIME_OUT, ACQUIRE_TIME_OUT);
+
+    Defer defer2([this, identifier, lock_key]() {
+        RedisMgr::GetInstance()->releaseLock(lock_key, identifier);
+    });
+
+    auto reg_count = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, minServer.name);
+    if (reg_count.empty()){
+        minServer.con_count = INT32_MAX;
+    }
+    else{
+        minServer.con_count = std::stoi(reg_count);
+    }
+
+    for (auto &server : _servers)
     {
-        if (minServer.con_count > server.second.con_count)
-        {
+        if (server.second.name == minServer.name)
+            continue;
+
+        auto ot_reg_count = RedisMgr::GetInstance()->HGet(LOGIN_COUNT, server.second.name);
+        if (ot_reg_count.empty()){
+            server.second.con_count = INT32_MAX;
+        }
+        else{
+            server.second.con_count = std::stoi(ot_reg_count);
+        }
+
+        if (server.second.con_count < minServer.con_count){
             minServer = server.second;
         }
     }
@@ -172,12 +207,6 @@ void StatusServer::insertIntoRedis(int uid, std::string token)
     RedisMgr::GetInstance()->Set(token_key, token);
 }
 
-void StatusServer::insertToken(int uid, std::string token)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    _tokens.insert(std::make_pair(uid, token));
-}
-
 void StatusServer::HandleVerifyToken(Json::Value& value)
 {
     Json::Value reply;
@@ -185,17 +214,16 @@ void StatusServer::HandleVerifyToken(Json::Value& value)
     std::string token = value["token"].asString();
     try
     {
-        std::lock_guard<std::mutex> lock(_mutex);
-        auto it = _tokens.find(std::stoi(uid));
-        if (it == _tokens.end())
-        {
+        std::string token_key = USERTOKENPREFIX + uid;
+        std::string token_value = "";
+        bool success = RedisMgr::GetInstance()->Get(token_key, token_value);
+        if (!success){
             reply["error"] = ErrorCodes::UidInvalid;
             SendReply(reply);
             return;
         }
 
-        if (it->second != token)
-        {
+        if (token_value != token){
             reply["error"] = ErrorCodes::TokenInvalid;
             SendReply(reply);
             return;
@@ -232,6 +260,6 @@ void StatusServer::SendReply(const Json::Value& reply)
 		socket_.send(zmq::buffer(jsonstr), zmq::send_flags::none);
 	}
 	catch (const std::exception& e) {
-		std::cerr << "[VerifyServer] Send error: " << e.what() << std::endl;
+        myspdlog::error("[VerifyServer] Send error: {}", e.what());
 	}
 }

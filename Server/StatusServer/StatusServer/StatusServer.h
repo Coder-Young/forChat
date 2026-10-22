@@ -33,7 +33,6 @@ private:
     ChatServer getChatServer();
 
     void insertIntoRedis(int uid, std::string token);
-    void insertToken(int uid, std::string token);
 
     void SendReply(const Json::Value& reply);
 

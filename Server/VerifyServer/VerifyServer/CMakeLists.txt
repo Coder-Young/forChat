@@ -51,6 +51,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_include_directories(${PROJECT_NAME} PRIVATE hiredis)
 
+add_subdirectory(/home/yzq/forChat/Server/mySpdlog mySpdlog_build)
+target_link_libraries(${PROJECT_NAME} PRIVATE myspdlog)
+
 if(JSONCPP_INCLUDE_DIRS)
     target_include_directories(${PROJECT_NAME} PRIVATE ${JSONCPP_INCLUDE_DIRS})
 endif()

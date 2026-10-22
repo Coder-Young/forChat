@@ -51,7 +51,7 @@ bool VerifyZmqClient::SendAndRecvMessage(const Json::Value& request, Json::Value
             return false;
         }
 
-        std::string reply_str = parts.at(2);
+        std::string reply_str = parts.back();
         Json::Reader reader;
         bool parse_success = reader.parse(reply_str, response);
         if (!parse_success) {

@@ -8,7 +8,7 @@ VerifyServer::VerifyServer(const std::string& addr, int threadNum) :
 	context_(1), socket_(context_, ZMQ_ROUTER), b_stop(false), _threadNum(threadNum)
 {
 	socket_.bind(addr);
-	std::cout << "[VerifyServer] Listening on " << addr << std::endl;
+	myspdlog::info("[VerifyServer] Listening on: {}", addr);
 }
 
 VerifyServer::~VerifyServer()
@@ -38,7 +38,7 @@ void VerifyServer::Run()
 		_threads.emplace_back(&VerifyServer::threadWorker, this);
 	}
 
-	std::cout << "[VerifyServer] Server started, waiting for requests..." << std::endl;
+	myspdlog::info("[VerifyServer] Server started, waiting for requests...");
 	while (!b_stop)
 	{
 		try {
@@ -109,7 +109,7 @@ void VerifyServer::HandleRequest(EmailRequest&& req)
 
 	std::string email = req.request["email"].asString();
 	std::string code = GenerateVerifyCode();
-	std::cout << "[VerifyServer] Generated code: " << code << " for " << email << std::endl;
+	myspdlog::info("[VerifyServer] Generated code: {} for {}", code, email);
 
 	std::string title = "VerifyCode";
 	std::string body =

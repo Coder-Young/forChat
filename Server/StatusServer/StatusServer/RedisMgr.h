@@ -25,6 +25,10 @@ public:
     bool ExistsKey(const std::string &key);
     void Close();
 
+    // 分布式锁相关
+    std::string acquireLock(const std::string& lockName, int lockTimeout, int acquireTimeout);
+    bool RedisMgr::releaseLock(const std::string& lockName, const std::string& identifier);
+
 private:
     RedisMgr();
     

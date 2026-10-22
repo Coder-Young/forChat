@@ -71,6 +71,9 @@ LogicSystem::LogicSystem()
 		auto user = src_root["user"].asString();
 		auto email = src_root["email"].asString();
 		auto pwd = src_root["passwd"].asString();
+		int sex = src_root["sex"].asInt();
+		auto icon = src_root["icon"].asString();
+		auto nick = src_root["nick"].asString();
 		auto cpwd = src_root["confirm"].asString();
 		auto code = src_root["varifycode"].asString();
 
@@ -104,8 +107,8 @@ LogicSystem::LogicSystem()
         	beast::ostream(connection->_response.body()) << jsonstr;
         	return true;
 		}
-
-		int ret = MySqlMgr::GetInstance()->RegUser(user, email, pwd);
+		
+		int ret = MySqlMgr::GetInstance()->RegUser(user, email, pwd, sex, icon, nick);
 		if (ret == 0 || ret == -1)
 		{
 			std::cout << "register user error" << std::endl;
@@ -122,6 +125,9 @@ LogicSystem::LogicSystem()
     	root["passwd"] = pwd;
     	root["confirm"] = cpwd;
     	root["varifycode"] = stored_code;
+		root["sex"] = sex;
+		root["icon"] = icon;
+		root["nick"] = nick;
 		std::string jsonstr = root.toStyledString();
 		beast::ostream(connection->_response.body()) << jsonstr;
 		return true;

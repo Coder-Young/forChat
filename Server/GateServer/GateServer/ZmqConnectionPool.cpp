@@ -18,7 +18,7 @@ ZmqConnectPool::ZmqConnectPool(std::string endpoint, size_t poolSize)
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[ZmqConnectPool] Failed to connect socket " << i << ": " << e.what() << std::endl;
+            std::cerr << "[ZmqConnectPool] Failed to connect endpoint " << endpoint_ << ": " << e.what() << std::endl;
         }
     }
 }

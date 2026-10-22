@@ -18,7 +18,7 @@ MySqlDao::~MySqlDao()
 
 }
 
-int MySqlDao::RegUser(const std::string &name, const std::string &email, const std::string& pwd)
+int MySqlDao::RegUser(const std::string& name, const std::string& email,  const std::string& pwd, const int& sex, const std::string& icon, const std::string& nick)
 {
     auto con = pool_->getConnection();
     try{
@@ -26,10 +26,13 @@ int MySqlDao::RegUser(const std::string &name, const std::string &email, const s
             return -1;
         }
 
-        std::unique_ptr<sql::PreparedStatement> stmt(con->prepareStatement("CALL reg_user('?','?','?',@result)"));
+        std::unique_ptr<sql::PreparedStatement> stmt(con->prepareStatement("CALL reg_user(?,?,?,?,?,?,@result)"));
         stmt->setString(1, name);
         stmt->setString(2, email);
         stmt->setString(3, pwd);
+        stmt->setInt(4, sex);
+        stmt->setString(5, icon);
+        stmt->setString(6, nick);
 
         stmt->execute();
         std::unique_ptr<sql::Statement> stmtResult(con->createStatement());
@@ -58,7 +61,7 @@ bool MySqlDao::CheckEmail(const std::string &name, const std::string &email)
 {
     auto con = pool_->getConnection();
     try{
-        std::unique_ptr<sql::PreparedStatement> pstmt(con->prepareStatement("SELECT email FROM user WHERE name='?'"));
+        std::unique_ptr<sql::PreparedStatement> pstmt(con->prepareStatement("SELECT email FROM user WHERE name=?"));
         pstmt->setString(1, name);
         std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 
@@ -132,8 +135,8 @@ bool MySqlDao::UpdatePwd(const std::string &name, const std::string &newPwd)
     auto con = pool_->getConnection();
     try{
         std::unique_ptr<sql::PreparedStatement> pstmt(con->prepareStatement("UPDATE user SET pwd=? WHERE name=?"));
-        pstmt->setString(1, name);
-        pstmt->setString(2, newPwd);
+        pstmt->setString(1, newPwd);
+        pstmt->setString(2, name);
 
         int updateCount = pstmt->executeUpdate();
         std::cout << "Updated rows: " << updateCount << std::endl;

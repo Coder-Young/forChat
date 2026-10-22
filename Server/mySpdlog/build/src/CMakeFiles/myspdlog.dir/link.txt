@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmyspdlog.a CMakeFiles/myspdlog.dir/level.cpp.o CMakeFiles/myspdlog.dir/formatter.cpp.o CMakeFiles/myspdlog.dir/pattern_formatter.cpp.o CMakeFiles/myspdlog.dir/logger.cpp.o CMakeFiles/myspdlog.dir/async_logger.cpp.o CMakeFiles/myspdlog.dir/registry.cpp.o CMakeFiles/myspdlog.dir/details/utils.cpp.o CMakeFiles/myspdlog.dir/details/thread_pool.cpp.o CMakeFiles/myspdlog.dir/sinks/rotating_file_sink.cpp.o
+/usr/bin/ranlib libmyspdlog.a

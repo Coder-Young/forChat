@@ -13,6 +13,7 @@
 #include <curl/curl.h>
 #include <zmq.hpp>
 #include <hiredis/hiredis.h>
+#include <myspdlog/myspdlog.h>
 
 struct EmailResult {
     bool success;

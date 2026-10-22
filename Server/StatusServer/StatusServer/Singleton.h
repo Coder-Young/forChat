@@ -1,7 +1,5 @@
 #pragma once
-#include <iostream>
-#include <mutex>
-#include <memory>
+#include "const.h"
 
 template <typename T>
 class Singleton

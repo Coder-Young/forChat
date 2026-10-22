@@ -1,5 +1,6 @@
 #include "RedisMgr.h"
 #include "CfgManager.h"
+#include "RedisConnectionGuard.h"
 
 RedisMgr::RedisMgr()
 {
@@ -17,7 +18,8 @@ RedisMgr::~RedisMgr()
 
 bool RedisMgr::Get(const std::string &key, std::string& value)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -44,7 +46,8 @@ bool RedisMgr::Get(const std::string &key, std::string& value)
 }
 
 bool RedisMgr::Set(const std::string &key, const std::string &value){
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -72,7 +75,8 @@ bool RedisMgr::Set(const std::string &key, const std::string &value){
 
 bool RedisMgr::Auth(const std::string &password)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -93,7 +97,8 @@ bool RedisMgr::Auth(const std::string &password)
 
 bool RedisMgr::LPush(const std::string &key, const std::string &value)
 {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -117,7 +122,8 @@ bool RedisMgr::LPush(const std::string &key, const std::string &value)
 }
 
 bool RedisMgr::LPop(const std::string &key, std::string& value){
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -137,7 +143,8 @@ bool RedisMgr::LPop(const std::string &key, std::string& value){
 }
 
 bool RedisMgr::RPush(const std::string& key, const std::string& value) {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -161,7 +168,8 @@ bool RedisMgr::RPush(const std::string& key, const std::string& value) {
 }
 
 bool RedisMgr::RPop(const std::string& key, std::string& value) {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -180,12 +188,12 @@ bool RedisMgr::RPop(const std::string& key, std::string& value) {
 }
 
 bool RedisMgr::HSet(const std::string &key, const std::string &hkey, const std::string &value) {
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
     }
-
     auto _reply = (redisReply*)redisCommand(connect, "HSET %s %s %s", key.c_str(), hkey.c_str(), value.c_str());
     if (_reply == nullptr || _reply->type != REDIS_REPLY_INTEGER ) {
         std::cout << "Execut command [ HSet " << key << "  " << hkey <<"  " << value << " ] failure ! " << std::endl;
@@ -210,7 +218,8 @@ bool RedisMgr::HSet(const char* key, const char* hkey, const char* hvalue, size_
     argv[3] = hvalue;
     argvlen[3] = hvaluelen;
 
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return false;
@@ -238,7 +247,8 @@ std::string RedisMgr::HGet(const std::string &key, const std::string &hkey)
     argv[2] = hkey.c_str();
     argvlen[2] = hkey.length();
 
-    auto connect = conn_pool_->getConnection();
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
     if (connect == nullptr)
     {
         return "";
@@ -257,11 +267,11 @@ std::string RedisMgr::HGet(const std::string &key, const std::string &hkey)
 
 bool RedisMgr::Del(const std::string &key)
 {
-    auto connect = conn_pool_->getConnection();
-    if (connect == nullptr)
-    {
-        return false;
-    }
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
+	if (connect == nullptr) {
+		return false;
+	}
 
     auto _reply = (redisReply*)redisCommand(connect, "DEL %s", key.c_str());
     if (_reply == nullptr || _reply->type != REDIS_REPLY_INTEGER) {
@@ -276,11 +286,11 @@ bool RedisMgr::Del(const std::string &key)
 
 bool RedisMgr::ExistsKey(const std::string &key)
 {
-    auto connect = conn_pool_->getConnection();
-    if (connect == nullptr)
-    {
-        return false;
-    }
+    RedisConnectionGuard guard(conn_pool_);
+    auto connect = guard.get();
+	if (connect == nullptr) {
+		return false;
+	}
 
     auto _reply = (redisReply*)redisCommand(connect, "exists %s", key.c_str());
     if (_reply == nullptr || _reply->type != REDIS_REPLY_INTEGER || _reply->integer == 0) {
